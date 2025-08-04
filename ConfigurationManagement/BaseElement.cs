@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 namespace ConfigurationManagement
 {
     /// <summary>Common Attributes for Configuration Item or Asset class</summary>
-    public abstract class BaseElement
+    public abstract class BaseElement : IBaseElement
     {
         /// <summary></summary>
         /// <remarks>Unique and Case Sensitive</remarks>
@@ -45,10 +45,10 @@ namespace ConfigurationManagement
 
         /// <summary>Location of CI or Asset. (Building,Floor,Room,Rack)</summary>
         public string Location { get; set; }
-        
+
         /// <summary>Soft Deleted</summary>
         public bool? Deleted { get; set; }
-        
+
         /// <summary>Manufacturer Name</summary>
         public string ModelManufacturer { get; set; }
 

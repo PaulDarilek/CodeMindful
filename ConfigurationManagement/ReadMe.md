@@ -1,4 +1,9 @@
 ﻿Configuration Management Database (CMDB)
+
+(CMDB) is a repository of information related to all the components of an information system. 
+It includes details about the configuration items (CIs) in the system, their attributes, and relationships between them. 
+The CMDB is used to track the state of each CI and its relationships with other CIs, which helps in managing changes, incidents, and problems in the IT environment.
+
 Configuration Item (CI) -- components of your IT infrastructure to deliver business services
 Assets are corporate resources that you need to manage from an inventory, financial, and contractual perspective. 
 

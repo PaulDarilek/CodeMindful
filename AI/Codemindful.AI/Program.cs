@@ -4,13 +4,15 @@ namespace Codemindful.AI;
 
 internal class Program
 {
-
+    private static bool WithHistory { get; } = false;
 
     public static void Main(string[] args)
     {
-        Console.WriteLine("Hello, World!");
-        Func<Uri, string, Task> chat = ChatWithHistoryAsync;
-        //Func<Uri, string, Task> chat = ChatAsync;
+        Console.WriteLine("Hello, AI!");
+        Func<Uri, string, Task> chat =
+            WithHistory ?
+            ChatWithHistoryAsync :
+            ChatAsync;
 
         var uri = new Uri("http://localhost:11434/");
         var model = AIModels.Phi3Mini;
@@ -33,8 +35,8 @@ internal class Program
 
         var chatHistory = new List<ChatMessage>()
         {
-            new ChatMessage(ChatRole.System, "You are a helpful AI assistant"),
-            new ChatMessage(ChatRole.User, "What is AI?"),
+            new(ChatRole.System, "You are a helpful AI assistant"),
+            new(ChatRole.User, "What is AI?"),
         };
 
         var chatOptions = new ChatOptions

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace ConfigurationManagement
+﻿namespace ConfigurationManagement
 {
     public interface ICollection : IBaseElement
     {
