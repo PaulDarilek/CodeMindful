@@ -6,8 +6,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Column = CodeMindful.CodeTools.DataDictionary.Models.Column;
 using System.Diagnostics;
-using Microsoft.EntityFrameworkCore;
-using System.Globalization;
 
 namespace CodeMindful.CodeTools.DataDictionary;
 
@@ -368,7 +366,9 @@ public class SqlServerScanner : IDisposable
 
         if (schema == "dbo" || schema == string.Empty)
         {
-            if (objectName == "dtproperties" || objectName ==  "sysdiagrams") return true;
+            if (objectName == "dtproperties" || 
+                objectName == "sysdiagrams" || 
+                objectName == "sysproperties") return true;
             if (objectName.StartsWith("dt_")) return true;
             if (objectName.StartsWith("sp_") && objectName.Contains("diagram")) return true;
         }

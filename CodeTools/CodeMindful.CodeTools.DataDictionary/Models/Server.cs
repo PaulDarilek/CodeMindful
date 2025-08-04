@@ -1,5 +1,4 @@
-﻿using Azure.Core.Pipeline;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 
 namespace CodeMindful.CodeTools.DataDictionary.Models;
 

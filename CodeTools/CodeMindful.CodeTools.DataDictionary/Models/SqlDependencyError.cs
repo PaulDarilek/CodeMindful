@@ -1,6 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Query.Internal;
-
-namespace CodeMindful.CodeTools.DataDictionary.Models;
+﻿namespace CodeMindful.CodeTools.DataDictionary.Models;
 
 /// <summary>Troubles Importing Sql Dependencies</summary>
 public class SqlDependencyError

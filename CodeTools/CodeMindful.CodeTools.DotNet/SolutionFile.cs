@@ -3,103 +3,102 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace CodeHaptic.CodeTools.DotNet
+namespace CodeMindful.CodeTools.DotNet;
+
+public class SolutionFile
 {
-    public class SolutionFile
+    public string FilePath { get; private set; }
+    public string Text { get; private set; }
+    public string SolutionGuid { get; set; }
+    public bool IsLoaded { get; private set; }
+    public string DirectoryPath
     {
-        public string FilePath { get; private set; }
-        public string Text { get; private set; }
-        public string SolutionGuid { get; set; }
-        public bool IsLoaded { get; private set; }
-        public string DirectoryPath
+        get
         {
-            get
+            return FilePath == null ? null : Path.GetDirectoryName(FilePath);
+        }
+    }
+
+    public List<ProjectFile> Projects { get; private set; }
+
+    public SolutionFile(string path)
+    {
+        FilePath = path;
+        Projects = new List<ProjectFile>();
+    }
+
+    public void Load()
+    {
+        if(File.Exists(FilePath))
+        {
+            Text = File.ReadAllText(FilePath);
+            ParseFileContents();
+            IsLoaded = true;
+        }
+                                                                                                       }
+    public void Clean()
+    {
+        DeleteTestResults();
+        DeletePackages();
+    }
+
+    public void DeleteTestResults()
+    {
+        var folder = Path.Combine(DirectoryPath, "TestResults");
+        if (Directory.Exists(folder))
+        {
+            var subFolders = Directory.EnumerateDirectories(folder);
+            foreach (string subFolder in subFolders)
             {
-                return FilePath == null ? null : Path.GetDirectoryName(this.FilePath);
+                Directory.Delete(subFolder, true);
             }
         }
+    }
 
-        public List<ProjectFile> Projects { get; private set; }
-
-        public SolutionFile(string path)
+    public void DeletePackages()
+    {
+        var folder = Path.Combine(DirectoryPath, "packages");
+        if (Directory.Exists(folder))
         {
-            this.FilePath = path;
-            this.Projects = new List<ProjectFile>();
-        }
-
-        public void Load()
-        {
-            if(File.Exists(this.FilePath))
+            var subFolders = Directory.EnumerateDirectories(folder);
+            foreach (string subFolder in subFolders)
             {
-                this.Text = File.ReadAllText(this.FilePath);
-                ParseFileContents();
-                this.IsLoaded = true;
-            }
-                                                                                                           }
-        public void Clean()
-        {
-            DeleteTestResults();
-            DeletePackages();
-        }
-
-        public void DeleteTestResults()
-        {
-            var folder = Path.Combine(this.DirectoryPath, "TestResults");
-            if (Directory.Exists(folder))
-            {
-                var subFolders = Directory.EnumerateDirectories(folder);
-                foreach (string subFolder in subFolders)
-                {
-                    Directory.Delete(subFolder, true);
-                }
+                Directory.Delete(subFolder, true);
             }
         }
+    }
 
-        public void DeletePackages()
+
+    private void ParseFileContents()
+    {
+        var lines = Text
+            .Split(Environment.NewLine.ToCharArray())
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .ToArray();
+
+        foreach (string line in lines)
         {
-            var folder = Path.Combine(this.DirectoryPath, "packages");
-            if (Directory.Exists(folder))
+            if (string.IsNullOrEmpty(line))
+                continue;
+            var text = line.Trim();
+
+            var find = "SolutionGuid = {";
+            if (text.StartsWith(find))
             {
-                var subFolders = Directory.EnumerateDirectories(folder);
-                foreach (string subFolder in subFolders)
-                {
-                    Directory.Delete(subFolder, true);
-                }
+                SolutionGuid = text.Substring(find.Length, text.Length - find.Length - 1);
+                continue;
             }
-        }
 
-
-        private void ParseFileContents()
-        {
-            var lines = this.Text
-                .Split(Environment.NewLine.ToCharArray())
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .ToArray();
-
-            foreach (string line in lines)
+            find = "Project(";
+            if (text.StartsWith(find))
             {
-                if (string.IsNullOrEmpty(line))
-                    continue;
-                var text = line.Trim();
-
-                var find = "SolutionGuid = {";
-                if (text.StartsWith(find))
-                {
-                    this.SolutionGuid = text.Substring(find.Length, text.Length - find.Length - 1);
-                    continue;
-                }
-
-                find = "Project(";
-                if (text.StartsWith(find))
-                {
-                    ProjectFile project = ProjectFile.ParseFromSolutionLine(text, this.DirectoryPath);
-                    if (project != null)
-                        this.Projects.Add(project);
-                    continue;
-                }
-                
-
+                ProjectFile project = ProjectFile.ParseFromSolutionLine(text, DirectoryPath);
+                if (project != null)
+                    Projects.Add(project);
+                continue;
             }
+            
+
         }
     }
 }

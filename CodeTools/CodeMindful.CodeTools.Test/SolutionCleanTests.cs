@@ -1,22 +1,21 @@
-using Xunit;
-using System.IO;
-using System.Linq;
-using CodeHaptic.CodeTools.DotNet;
+using CodeMindful.CodeTools.DotNet;
 using System;
 using System.Configuration;
-using CodeMindful.CodeTools.DotNet;
+using System.IO;
+using System.Linq;
+using Xunit;
 
-namespace CodeHaptic.CodeTools.Test
+namespace CodeMindful.CodeTools.Test
 {
     public class SolutionCleanTests
     {
         private static string SolutionDirSetting = ConfigurationManager.AppSettings[nameof(SolutionDir)];
-        private string SolutionDir = Path.GetFullPath(Path.Combine(System.Environment.CurrentDirectory, @"..\..\..\.."));
+        private string SolutionDir = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, @"..\..\..\.."));
 
         [Fact]
         public void LoadsSolutionFile()
         {
-            SolutionFile solution = new SolutionFile(Path.Combine(SolutionDir, "CodeHaptic.CodeTools.sln"));
+            SolutionFile solution = new SolutionFile(Path.Combine(SolutionDir, "CodeMindful.CodeTools.sln"));
             TestSolutionLoadAndClean(solution);
         }
 
