@@ -9,13 +9,13 @@ namespace CodeMindful.CodeTools.Test
 {
     public class SolutionCleanTests
     {
-        private static string SolutionDirSetting = ConfigurationManager.AppSettings[nameof(SolutionDir)];
-        private string SolutionDir = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, @"..\..\..\.."));
+        private static string SolutionDirSetting { get; } = ConfigurationManager.AppSettings[nameof(SolutionDir)];
+        private string SolutionDir { get; } = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, @"..\..\..\.."));
 
         [Fact]
         public void LoadsSolutionFile()
         {
-            SolutionFile solution = new SolutionFile(Path.Combine(SolutionDir, "CodeMindful.CodeTools.sln"));
+            var solution = new SolutionFile(Path.Combine(SolutionDir, "CodeMindful.CodeTools.sln"));
             TestSolutionLoadAndClean(solution);
         }
 
@@ -32,8 +32,8 @@ namespace CodeMindful.CodeTools.Test
         [Fact]
         public void FindSolutions()
         {
-            var solutions = CodeScanner.Instance.FindSolutionFiles(SolutionDir, true).ToArray();
-            var count = solutions.Count();
+            var solutions = CodeScanner.FindSolutionFiles(SolutionDir, true).ToArray();
+            var count = solutions.Length;
             Assert.True(count > 0);
             foreach (var solution in solutions)
             {
@@ -44,8 +44,8 @@ namespace CodeMindful.CodeTools.Test
         [Fact]
         public void FindSolutionsRepo()
         {
-            var solutions = CodeScanner.Instance.FindSolutionFiles(Path.Combine(SolutionDir,".."), true).ToArray();
-            var count = solutions.Count();
+            var solutions = CodeScanner.FindSolutionFiles(Path.Combine(SolutionDir,".."), true).ToArray();
+            var count = solutions.Length;
             Assert.True(count > 0);
             foreach (var solution in solutions)
             {
@@ -54,7 +54,7 @@ namespace CodeMindful.CodeTools.Test
                 solution.DeletePackages();
             }
         }
-        private void TestSolutionLoadAndClean(SolutionFile solution)
+        private static void TestSolutionLoadAndClean(SolutionFile solution)
         {
             solution.Load();
 

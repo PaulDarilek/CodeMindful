@@ -7,9 +7,10 @@ using System.Xml.Linq;
 
 namespace CodeMindful.CodeTools.DotNet;
 
-public class ProjectFile
+[method: DebuggerStepperBoundary]
+public class ProjectFile(string path)
 {
-    public string FilePath { get; private set; }
+    public string FilePath { get; private set; } = path;
     public string ProjectGuid { get; private set; }
     public string AssemblyName { get; private set; }
     public string Platform { get; private set; }
@@ -20,13 +21,7 @@ public class ProjectFile
     public bool AutoGenerateBindingRedirects { get; private set; }
     public string Text { get; private set; }
     public string[] OutputPaths { get; private set; }
-    public List<ProjectDependency> Dependencies { get; private set; }
-
-    public ProjectFile(string path)
-    {
-        FilePath = path;
-        Dependencies = new List<ProjectDependency>();
-    }
+    public List<ProjectDependency> Dependencies { get; private set; } = [];
 
     public ProjectFile Load()
     {
@@ -82,11 +77,11 @@ public class ProjectFile
                 AutoGenerateBindingRedirects = bool.Parse(projInfo.AutoGenerateBindingRedirects);
             }
 
-            OutputPaths = (
+            OutputPaths = [.. (
                 from item in xDoc.Descendants(ns + "PropertyGroup")
                 where item.Element(ns + "OutputPath") != null
                 select item.Element(ns + "OutputPath").Value
-                ).ToArray();
+                )];
 
 
             Dependencies.Clear();
@@ -149,7 +144,7 @@ public class ProjectFile
         if (line.StartsWith(projStart))
         {
             string guid1 = line.Substring(projStart.Length, 36);
-            line = line.Substring(projStart.Length + guid1.Length + projNext1.Length);
+            line = line[(projStart.Length + guid1.Length + projNext1.Length)..];
             string[] parts = line.Split(",".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length >= 3)
             {

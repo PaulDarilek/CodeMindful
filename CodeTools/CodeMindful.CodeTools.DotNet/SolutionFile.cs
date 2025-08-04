@@ -1,13 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
 namespace CodeMindful.CodeTools.DotNet;
 
-public class SolutionFile
+[method: DebuggerStepThrough]
+public class SolutionFile(string path)
 {
-    public string FilePath { get; private set; }
+    public string FilePath { get; private set; } = path;
     public string Text { get; private set; }
     public string SolutionGuid { get; set; }
     public bool IsLoaded { get; private set; }
@@ -19,13 +21,7 @@ public class SolutionFile
         }
     }
 
-    public List<ProjectFile> Projects { get; private set; }
-
-    public SolutionFile(string path)
-    {
-        FilePath = path;
-        Projects = new List<ProjectFile>();
-    }
+    public List<ProjectFile> Projects { get; private set; } = [];
 
     public void Load()
     {
