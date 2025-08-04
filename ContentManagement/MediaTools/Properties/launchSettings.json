@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "MediaTools": {
+      "commandName": "Project",
+      "commandLineArgs": "-Recurse"
+    }
+  }
+}
