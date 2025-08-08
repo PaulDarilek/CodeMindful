@@ -1,106 +1,120 @@
 ﻿using CodeMindful.CodeTools.DataDictionary.Models;
-using System;
-using System.Data.Common;
 using Microsoft.Data.SqlClient;
+using System;
+using System.Data;
+using System.Data.Common;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Column = CodeMindful.CodeTools.DataDictionary.Models.Column;
-using System.Diagnostics;
 
 namespace CodeMindful.CodeTools.DataDictionary;
 
-public class SqlServerScanner : IDisposable
+public class SqlServerScanner 
 {
     private DataContext DataDictionary { get; }
-    internal SqlConnection? Connection { get; set; }
 
     /// <summary>Constructor</summary>
-    /// <param name="connectionString"></param>
+    /// <param name="dataDict"></param>
     public SqlServerScanner(DataContext dataDict)
     {
         ArgumentNullException.ThrowIfNull(dataDict);
         DataDictionary = dataDict;
     }
 
-    public async Task ReadInformationSchema(SqlConnection connection)
+    public static string BuildConnectionString(string connectionString)
+    {
+        var builder = new SqlConnectionStringBuilder(connectionString)
+        {
+            IntegratedSecurity = true,
+            TrustServerCertificate = true,
+            Pooling = true,
+            MaxPoolSize = 10,
+        };
+        Debug.WriteLine($"Server={builder.DataSource} Database={builder.InitialCatalog} ");
+        Debug.WriteLine($"{nameof(builder.ConnectionString)} is {nameof(builder.ConnectionString)}");
+
+        return builder.ConnectionString;
+    }
+
+    public async Task<ServerCatalog> ReadInformationSchema(string sqlConnectionString)
+    {
+        sqlConnectionString = BuildConnectionString(sqlConnectionString);
+        using var conn = new SqlConnection(sqlConnectionString);
+        var dbInstance = await ReadInformationSchema(conn);
+        return dbInstance;
+    }
+
+    public async Task<ServerCatalog> ReadInformationSchema(SqlConnection connection)
     {
         ArgumentNullException.ThrowIfNull(connection);
-        Connection = connection;
-        await ReadCatalogName();
-        await ReadSchemas();
-        await ReadTables();
-        await ReadColumns();
-        await ReadRoutines();
-        await ReadDependencies();
-        await RemoveSystemObjects();
+        var dbInstance = await ReadCatalogName(connection);
+        await ReadSchemas(connection);
+        await ReadTables(connection);
+        await ReadColumns(connection);
+        await ReadRoutines(connection);
+        await ReadDependencies(connection);
+        return dbInstance;
     }
 
-    public async Task RemoveSystemObjects()
+    internal async Task<ServerCatalog> ReadCatalogName(SqlConnection connection)
     {
-        await RunSqliteCmd("Delete from SqlDependencies where ReferencedSchema in ('dbo','') and ReferencedObjectName in ('dtproperties','sysdiagrams', 'sysproperties');");
-        await RunSqliteCmd("Delete from Tables where Schema = 'dbo' and TableName in ('dtproperties','sysdiagrams', 'sysproperties');");
-        await RunSqliteCmd("Delete from Routines where RoutineName like 'dt_%';");
-        await RunSqliteCmd("Delete from SqlDependencies where ObjectName like 'sp_%diagram%';");
-        await RunSqliteCmd("Delete from Routines where RoutineName like 'sp_%diagram%';");
+        using var reader = await RunQueryAsync(connection, "Select DB_NAME() as Catalog, @@ServerName as ServerName");
 
-        async Task<int> RunSqliteCmd(string sql)
+        if (!reader.Read())
         {
-            Debug.Assert(!string.IsNullOrEmpty(sql));
-            int count = 0;
-            //count += await DataDictionary.Database.ExecuteSqlRawAsync(sql);
-            count += await DataDictionary.SaveChangesAsync();
-            return count;
+            throw new ArgumentOutOfRangeException(connection?.ConnectionString);
         }
-    }
 
-    internal async Task ReadCatalogName()
-    {
-        using var reader = await RunQueryAsync("Select DB_NAME() as Catalog, @@ServerName as ServerName");
-        if (reader == null) return;
-
-        while (await reader.ReadAsync())
+        var catalog = new Catalog
         {
-            var catalog = new Catalog
-            {
-                CatalogName = reader.IsDBNull(0) ? string.Empty : reader.GetString(0),
-            };
+            CatalogName = reader.IsDBNull(0) ? string.Empty : reader.GetString(0),
+        };
 
-            var server = new Server
-            {
-                ServerName = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
-            };
-
-            if (!DataDictionary.Servers.Any(row => row.ServerName == server.ServerName))
-            {
-                DataDictionary.Servers.Add(server);
-            }
-
-            if (!DataDictionary.Catalogs.Any(row => row.CatalogName == catalog.CatalogName))
-            {
-                DataDictionary.Catalogs.Add(catalog);
-            }
-
-            if (!DataDictionary.ServerCatalogs.Any(s => s.ServerName == server.ServerName && s.CatalogName == catalog.CatalogName ))
-            {
-                DataDictionary.ServerCatalogs.Add(new ServerCatalog { ServerName = server.ServerName, CatalogName = catalog.CatalogName});
-            }
-
+        if (!DataDictionary.Catalogs.Any(row => row.CatalogName == catalog.CatalogName))
+        {
+            DataDictionary.Catalogs.Add(catalog);
         }
+
+        var server = new Server
+        {
+            ServerName = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+        };
+
+        if (!DataDictionary.Servers.Any(row => row.ServerName == server.ServerName))
+        {
+            DataDictionary.Servers.Add(server);
+        }
+
+        var dbInstance =
+            DataDictionary.ServerCatalogs
+            .FirstOrDefault(s => s.ServerName == server.ServerName && s.CatalogName == catalog.CatalogName);
+
+        if (dbInstance == null)
+        {
+            dbInstance = new ServerCatalog { ServerName = server.ServerName, CatalogName = catalog.CatalogName };
+            DataDictionary.ServerCatalogs.Add(dbInstance);
+        }
+
         await DataDictionary.SaveChangesAsync();
+        return dbInstance;
     }
 
-    internal async Task ReadSchemas()
+    internal async Task ReadSchemas(SqlConnection connection)
     {
-        using var reader = await RunQueryAsync("Select SCHEMA_NAME, CATALOG_NAME, SCHEMA_OWNER from INFORMATION_SCHEMA.SCHEMATA");
+        using var reader = await RunQueryAsync(connection, "Select SCHEMA_NAME, CATALOG_NAME, SCHEMA_OWNER from INFORMATION_SCHEMA.SCHEMATA");
         if (reader == null) return;
 
         while (await reader.ReadAsync())
         {
             var row = new Schema { 
-                SchemaName = reader.GetString(0).ToLower(), 
+                SchemaName = reader.GetString(0), 
                 CatalogName = reader.GetString(1),
                 Owner = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
             };
+
+            if (ShouldIgnoreSchema(row.SchemaName))
+                continue;
 
             var match = DataDictionary.Schemas.Where(c => c.SchemaName == row.SchemaName && c.CatalogName == row.CatalogName ).FirstOrDefault();
             if (match == null)
@@ -111,9 +125,9 @@ public class SqlServerScanner : IDisposable
         await DataDictionary.SaveChangesAsync();
     }
 
-    internal async Task ReadTables()
+    internal async Task ReadTables(SqlConnection connection)
     {
-        using var reader = await RunQueryAsync("Select TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE from INFORMATION_SCHEMA.TABLES");
+        using var reader = await RunQueryAsync(connection, "Select TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE from INFORMATION_SCHEMA.TABLES");
         if (reader == null) return;
 
         while (await reader.ReadAsync())
@@ -121,7 +135,7 @@ public class SqlServerScanner : IDisposable
             var row = new SqlObject
             {
                 CatalogName = reader.GetString(0),
-                SchemaName = reader.GetString(1).ToLower(),
+                SchemaName = reader.GetString(1),
                 ObjectName = reader.GetString(2),
                 Type = (reader.GetString(3) == "VIEW") ? SqlType.View : SqlType.Table, 
             };
@@ -137,19 +151,19 @@ public class SqlServerScanner : IDisposable
         await DataDictionary.SaveChangesAsync();
     }
 
-    internal async Task ReadColumns()
+    internal async Task ReadColumns(SqlConnection connection)
     {
         const string sql =
             "SELECT TABLE_CATALOG,TABLE_SCHEMA,TABLE_NAME,COLUMN_NAME,ORDINAL_POSITION" +
             ",COLUMN_DEFAULT,IS_NULLABLE,DATA_TYPE,CHARACTER_MAXIMUM_LENGTH" +
             " FROM INFORMATION_SCHEMA.COLUMNS";
-        using var reader = await RunQueryAsync(sql);
+        using var reader = await RunQueryAsync(connection, sql);
         if (reader == null) return;
 
         while (await reader.ReadAsync())
         {
             string catalog = reader.GetString(0);
-            string schema = reader.GetString(1).ToLower();
+            string schema = reader.GetString(1);
             string tableName = reader.GetString(2);
 
             if (IsSystemObject(schema, tableName)) continue;
@@ -195,10 +209,10 @@ public class SqlServerScanner : IDisposable
         await DataDictionary.SaveChangesAsync();
     }
 
-    internal async Task ReadRoutines()
+    internal async Task ReadRoutines(SqlConnection connection)
     {
         const string sql = "SELECT ROUTINE_CATALOG, ROUTINE_SCHEMA, ROUTINE_NAME, ROUTINE_TYPE, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, ROUTINE_DEFINITION FROM INFORMATION_SCHEMA.ROUTINES";
-        using var reader = await RunQueryAsync(sql);
+        using var reader = await RunQueryAsync(connection, sql);
         if (reader == null) return;
 
         while (await reader.ReadAsync())
@@ -207,7 +221,7 @@ public class SqlServerScanner : IDisposable
             {
                 SqlObjectId = default,
                 CatalogName = reader.GetString(0),
-                SchemaName = reader.GetString(1).ToLower(),
+                SchemaName = reader.GetString(1),
                 ObjectName = reader.GetString(2),
                 Type = (reader.GetString(3) == "FUNCTION") ? SqlType.Function : SqlType.Procedure,
                 Data_Type =
@@ -227,7 +241,7 @@ public class SqlServerScanner : IDisposable
         await DataDictionary.SaveChangesAsync();
     }
 
-    internal async Task ReadDependencies()
+    internal async Task ReadDependencies(SqlConnection connection)
     {
         string sql = "SELECT " +
             "DB_Name() as CatalogName" +
@@ -239,7 +253,7 @@ public class SqlServerScanner : IDisposable
             " WHERE (OBJECTPROPERTY(referencing_id, 'IsProcedure') = 1 OR OBJECTPROPERTY(referencing_id, 'IsView') = 1)" +
             " ORDER BY OBJECT_SCHEMA_NAME(referencing_id), OBJECT_NAME(referencing_id), referenced_schema_name, referenced_entity_name";
 
-        using var reader = await RunQueryAsync(sql);
+        using var reader = await RunQueryAsync(connection, sql);
         if (reader == null) return;
 
         while (await reader.ReadAsync())
@@ -264,11 +278,13 @@ public class SqlServerScanner : IDisposable
                 continue;
             }
 
+            // Fix case of the schema
             referencedSchemaName =
                 DataDictionary.Schemas
                 .Where(x => x.CatalogName == catalogName && x.SchemaName == referencedSchemaName).Select(x => x.SchemaName)
                 .FirstOrDefault() ?? referencedSchemaName;
 
+            // Fix case of the Object
             var referencedObject =
                 DataDictionary.SqlObjects
                 .Where(x => x.CatalogName == catalogName && x.SchemaName == referencedSchemaName && x.ObjectName == referencedObjectName)
@@ -328,9 +344,24 @@ public class SqlServerScanner : IDisposable
 
     }
 
-    private async Task<DbDataReader> RunQueryAsync(string sql)
+    private static async Task<DbDataReader> RunQueryAsync(SqlConnection connection, string sql)
     {
-        using var cmd = new SqlCommand(sql, Connection)
+        ArgumentNullException.ThrowIfNull(connection);
+        if(connection.State != ConnectionState.Open )
+        {
+            try
+            {
+                await connection.OpenAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine(sql);
+                Console.Error.WriteLine(ex.ToString());
+                throw;
+            }
+        }
+
+        using var cmd = new SqlCommand(sql, connection)
         {
             CommandText = sql,
             CommandType = System.Data.CommandType.Text,
@@ -348,17 +379,6 @@ public class SqlServerScanner : IDisposable
         }
     }
 
-
-    public void Dispose()
-    {
-        if (Connection != null)
-        {
-            Connection.Dispose();
-            Connection = null;
-        }
-        GC.SuppressFinalize(this);
-    }
-
     private static bool IsSystemObject(string schema, string objectName)
     {
         schema = schema?.ToLower() ?? string.Empty;
@@ -373,5 +393,30 @@ public class SqlServerScanner : IDisposable
             if (objectName.StartsWith("sp_") && objectName.Contains("diagram")) return true;
         }
         return false;
+    }
+
+    /// <summary>Built in Schemas that should be Ignored</summary>
+    /// <remarks>See https://learn.microsoft.com/en-us/sql/relational-databases/security/authentication-access/ownership-and-user-schema-separation?view=sql-server-ver17</remarks>
+    private static bool ShouldIgnoreSchema(string schema)
+    {
+        schema = schema?.ToLower() ?? string.Empty;
+        return schema switch
+        {
+            "sys" => true,// built in for system, cannot be dropped
+            "information_schema" => true,// built in for system, cannot be dropped
+            "guest" => true,// built in for system, cannot be dropped
+                            
+            // schemas matching role names can be dropped (added for backward compatibility)
+            "db_owner" => true,
+            "db_datareader" => true,
+            "db_datawriter" => true,
+            "db_accessadmin" => true,
+            "db_backupoperator" => true,
+            "db_ddladmin" => true,
+            "db_denydatareader" => true,
+            "db_denydatawriter" => true,
+            "db_securityadmin" => true,
+            _ => false,
+        };
     }
 }

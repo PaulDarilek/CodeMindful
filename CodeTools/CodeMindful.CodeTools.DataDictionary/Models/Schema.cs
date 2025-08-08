@@ -20,4 +20,5 @@ public class Schema : ICatalogSchema, IDescription
     public string Description { get; set; } = string.Empty;
     
     public string? Owner { get; set; }
+
 }

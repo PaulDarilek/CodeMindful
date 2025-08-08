@@ -33,7 +33,7 @@ namespace CodeMindful.CodeTools.DataDictionary.Migrations
                     b.HasKey("CatalogName")
                         .HasName("PK_Catalogs");
 
-                    b.ToTable("Catalogs", (string)null);
+                    b.ToTable("Catalogs", "dbo");
                 });
 
             modelBuilder.Entity("CodeMindful.CodeTools.DataDictionary.Models.Column", b =>
@@ -68,7 +68,7 @@ namespace CodeMindful.CodeTools.DataDictionary.Migrations
 
                     b.HasIndex(new[] { "ColumnName" }, "ColumnName");
 
-                    b.ToTable("Columns", (string)null);
+                    b.ToTable("Columns", "dbo");
                 });
 
             modelBuilder.Entity("CodeMindful.CodeTools.DataDictionary.Models.Integration", b =>
@@ -91,13 +91,18 @@ namespace CodeMindful.CodeTools.DataDictionary.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<int?>("ParentIntegrationId")
+                        .HasColumnType("int");
+
                     b.HasKey("IntegrationId")
                         .HasName("PK_Integrations");
+
+                    b.HasIndex("ParentIntegrationId");
 
                     b.HasIndex(new[] { "Name" }, "Name")
                         .IsUnique();
 
-                    b.ToTable("Integrations", (string)null);
+                    b.ToTable("Integrations", "dbo");
                 });
 
             modelBuilder.Entity("CodeMindful.CodeTools.DataDictionary.Models.IntegrationObject", b =>
@@ -120,7 +125,7 @@ namespace CodeMindful.CodeTools.DataDictionary.Migrations
 
                     b.HasIndex("SqlObjectId");
 
-                    b.ToTable("IntegrationObjects", (string)null);
+                    b.ToTable("IntegrationObjects", "dbo");
                 });
 
             modelBuilder.Entity("CodeMindful.CodeTools.DataDictionary.Models.Schema", b =>
@@ -141,7 +146,7 @@ namespace CodeMindful.CodeTools.DataDictionary.Migrations
                     b.HasKey("CatalogName", "SchemaName")
                         .HasName("PK_Schemas");
 
-                    b.ToTable("Schemas", (string)null);
+                    b.ToTable("Schemas", "dbo");
                 });
 
             modelBuilder.Entity("CodeMindful.CodeTools.DataDictionary.Models.Server", b =>
@@ -160,7 +165,7 @@ namespace CodeMindful.CodeTools.DataDictionary.Migrations
                     b.HasKey("ServerName")
                         .HasName("PK_Servers");
 
-                    b.ToTable("Servers", (string)null);
+                    b.ToTable("Servers", "dbo");
                 });
 
             modelBuilder.Entity("CodeMindful.CodeTools.DataDictionary.Models.ServerCatalog", b =>
@@ -176,7 +181,7 @@ namespace CodeMindful.CodeTools.DataDictionary.Migrations
 
                     b.HasIndex("CatalogName");
 
-                    b.ToTable("ServerCatalogs", (string)null);
+                    b.ToTable("ServerCatalogs", "dbo");
                 });
 
             modelBuilder.Entity("CodeMindful.CodeTools.DataDictionary.Models.SqlDependency", b =>
@@ -207,7 +212,7 @@ namespace CodeMindful.CodeTools.DataDictionary.Migrations
 
                     b.HasIndex("SqlObjectId");
 
-                    b.ToTable("SqlDependencies", (string)null);
+                    b.ToTable("SqlDependencies", "dbo");
                 });
 
             modelBuilder.Entity("CodeMindful.CodeTools.DataDictionary.Models.SqlDependencyError", b =>
@@ -266,6 +271,9 @@ namespace CodeMindful.CodeTools.DataDictionary.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("Category")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Data_Type")
                         .HasColumnType("nvarchar(max)");
 
@@ -275,6 +283,9 @@ namespace CodeMindful.CodeTools.DataDictionary.Migrations
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool?>("Ignore")
+                        .HasColumnType("bit");
 
                     b.Property<string>("ObjectName")
                         .IsRequired()
@@ -299,7 +310,7 @@ namespace CodeMindful.CodeTools.DataDictionary.Migrations
                     b.HasIndex(new[] { "CatalogName", "SchemaName", "ObjectName" }, "QualifiedName")
                         .IsUnique();
 
-                    b.ToTable("SqlObjects", (string)null);
+                    b.ToTable("SqlObjects", "dbo");
                 });
 
             modelBuilder.Entity("CodeMindful.CodeTools.DataDictionary.Models.Column", b =>
@@ -311,6 +322,15 @@ namespace CodeMindful.CodeTools.DataDictionary.Migrations
                         .IsRequired();
 
                     b.Navigation("Table");
+                });
+
+            modelBuilder.Entity("CodeMindful.CodeTools.DataDictionary.Models.Integration", b =>
+                {
+                    b.HasOne("CodeMindful.CodeTools.DataDictionary.Models.Integration", "ParentIntegration")
+                        .WithMany("ChildIntegrations")
+                        .HasForeignKey("ParentIntegrationId");
+
+                    b.Navigation("ParentIntegration");
                 });
 
             modelBuilder.Entity("CodeMindful.CodeTools.DataDictionary.Models.IntegrationObject", b =>
@@ -388,6 +408,8 @@ namespace CodeMindful.CodeTools.DataDictionary.Migrations
 
             modelBuilder.Entity("CodeMindful.CodeTools.DataDictionary.Models.Integration", b =>
                 {
+                    b.Navigation("ChildIntegrations");
+
                     b.Navigation("IntegrationObjects");
                 });
 #pragma warning restore 612, 618

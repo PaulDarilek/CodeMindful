@@ -40,6 +40,7 @@ public class ReportToMarkDown(DataContext dataDictionary, DirectoryInfo reportDi
             .AppendLine();
 
         AppendCatalog(catalog, text);
+        AppendSchema(catalog, text);
         AppendTables(catalog, text, isView: false);
         AppendTables(catalog, text, isView: true);
         AppendRoutines(catalog, text);
@@ -143,12 +144,30 @@ public class ReportToMarkDown(DataContext dataDictionary, DirectoryInfo reportDi
         text.AppendLine();
     }
 
+    private void AppendSchema(Catalog catalog, StringBuilder text)
+    {
+        var rows = DataDictionary.Schemas
+            .Where(row => row.CatalogName == catalog.CatalogName)
+            .ToList();
+
+        text.AppendLine("Schemas:");
+        foreach (var row in rows)
+        {
+            text.Append("## ").AppendLine(row.SchemaName);
+            if (!string.IsNullOrWhiteSpace(row.Description))
+            {
+                text.AppendLine($"- Description: {row.Description}|");
+            }
+        }
+        text.AppendLine();
+    }
+
     private void AppendTables(Catalog catalog, StringBuilder text, bool isView)
     {
         var sqlType = isView ? SqlType.View : SqlType.Table;
 
         var tables = DataDictionary.SqlObjects
-            .Where(x => x.CatalogName == catalog.CatalogName && x.Type == sqlType)
+            .Where(x => x.CatalogName == catalog.CatalogName && x.Type == sqlType && x.Ignore != true)
             .OrderBy(x => x.SchemaName)
             .ThenBy(x => x.ObjectName)
             .ToList();
@@ -193,7 +212,7 @@ public class ReportToMarkDown(DataContext dataDictionary, DirectoryInfo reportDi
     private void AppendRoutines(Catalog catalog, StringBuilder text)
     {
         var routines = DataDictionary.SqlObjects
-            .Where(x => x.CatalogName == catalog.CatalogName && (x.Type == SqlType.Procedure || x.Type == SqlType.Function) )
+            .Where(x => x.CatalogName == catalog.CatalogName && (x.Type == SqlType.Procedure || x.Type == SqlType.Function) && x.Ignore != true)
             .OrderBy(x => x.SchemaName)
             .ThenBy(x => x.ObjectName)
             .ToList();

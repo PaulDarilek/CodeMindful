@@ -214,6 +214,14 @@ internal class ModelHelper :
             .HasKey(x => x.IntegrationId)
             .HasName("PK_" + tableName);
 
+        // Optional Parent Integration
+        builder
+            .HasOne(x => x.ParentIntegration)
+            .WithMany(x => x.ChildIntegrations)
+            .HasForeignKey(x => x.ParentIntegrationId)
+            .OnDelete(DeleteBehavior.ClientSetNull)
+            .IsRequired(false);
+
         builder.HasIndex([nameof(Integration.Name)], nameof(Integration.Name)).IsUnique(true);
     }
 

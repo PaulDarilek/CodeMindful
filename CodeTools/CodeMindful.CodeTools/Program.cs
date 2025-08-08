@@ -6,36 +6,26 @@ namespace CodeMindful.CodeTools
 {
     internal class Program
     {
-        [Obsolete]
         public static async Task Main(string[] args)
         {
             Console.WriteLine("Scan SQL Database for Schema Objects and Dependencies!");
 
             //var connectionString = Environment.ExpandEnvironmentVariables("Data Source=%USERPROFILE%\\Sqlite\\DataDictionary.sqLite");
-            var connectionString = "Server=.;Database=DataDictionary;";
-
-            var builder = new SqlConnectionStringBuilder(connectionString)
-            {
-                IntegratedSecurity = true,
-                TrustServerCertificate = true,
-                Pooling = true,
-                MaxPoolSize = 10,
-            };
-
-            connectionString = builder.ConnectionString;
+            var connectionString = 
+                SqlServerScanner.BuildConnectionString("Server=.;Database=DataDictionary;");
 
             var dataDict = new DataContext(connectionString);
 
             var scanner = new SqlServerScanner(dataDict);
 
-            foreach (var argument in args)
-            {
-                var conn = GetSqlConnection(argument).GetAwaiter().GetResult();
-                Console.WriteLine($"Scan: {conn.DataSource}.{conn.Database}");
-                scanner.ReadInformationSchema(conn).GetAwaiter().GetResult();   
-            }
+            var connectionStrings = GetConnectionStrings(args);
 
-            await scanner.RemoveSystemObjects();
+            foreach (var connString in connectionStrings)
+            {
+                Console.WriteLine($"Process Schema for: {connString}");
+                var dbInstance = await scanner.ReadInformationSchema(connString);
+                Console.WriteLine($"Schema for {dbInstance.ServerName}.{dbInstance.CatalogName} processed!");
+            }
 
             Console.WriteLine("Reporting to Markdown!");
             var reportDir = new DirectoryInfo(Path.Combine(Environment.ExpandEnvironmentVariables("%USERPROFILE%"), "DataDictionary"));
@@ -45,31 +35,28 @@ namespace CodeMindful.CodeTools
             Console.WriteLine("Done!");
         }
 
-        [Obsolete]
-        public static async Task<SqlConnection> GetSqlConnection(string  connectionString)
+        private static IEnumerable<string> GetConnectionStrings(IEnumerable<string> args)
         {
-            var builder = new SqlConnectionStringBuilder(connectionString)
+            int count = 0;
+            foreach (var arg in args)
             {
-                IntegratedSecurity = true,
-                TrustServerCertificate = true,
-                Pooling = true,
-                MaxPoolSize = 10,
-            };
-            Debug.WriteLine($"Server={builder.DataSource} Database={builder.InitialCatalog} ");
-            Debug.WriteLine($"{nameof(builder.ConnectionString)} is {nameof(builder.ConnectionString)}");
+                count++;
+                Console.WriteLine(arg);
+                yield return arg;
+            }
+            if (count > 0) 
+                yield break;
 
-            var conn = new SqlConnection(builder.ConnectionString);
-            try
+            Console.WriteLine("Enter SQL Connection (or blank line to quit)\n\t(Example: Server=myServer;Database=myDb;)");
+            string? connString = Console.ReadLine();
+            while (!string.IsNullOrWhiteSpace(connString))
             {
-                await conn.OpenAsync();
+                yield return connString;
+                Console.WriteLine("Enter SQL Connection (or blank line to quit)\n\t(Example: Server=myServer;Database=myDb;)");
+                connString = Console.ReadLine();
             }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine(ex.ToString());
-                throw;
-            }
-            return conn;
         }
+
 
     }
 }

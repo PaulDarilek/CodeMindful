@@ -15,6 +15,10 @@ public class Integration : IDescription
 
     public string Description { get; set; } = string.Empty;
 
+    public int? ParentIntegrationId { get; set; }
+    public virtual Integration? ParentIntegration { get; set; }
+    public virtual HashSet<Integration> ChildIntegrations { get; set; } = [];
+ 
     public virtual HashSet<IntegrationObject> IntegrationObjects { get; set; } = [];
 }
 

@@ -31,6 +31,13 @@ public class SqlObject : ISqlObjectId, ICatalogSchema, IObjectName
     /// <summary>Does Proc do CRUD?</summary>
     public string? Operation { get; set; }
 
+    /// <summary>Category for Reporting</summary>
+    /// <remarks>Can be used for </remarks>
+    public string? Category { get; set; }
+
+    /// <summary>Ignore if System or Unimportant for reporting</summary>
+    public bool? Ignore { get; set; }
+
     /// <summary>Text Description of purpose or context (manually input)</summary>
     public string Description { get; set; } = string.Empty;
 
@@ -39,9 +46,5 @@ public class SqlObject : ISqlObjectId, ICatalogSchema, IObjectName
 
     public string TwoPartName() => string.IsNullOrEmpty(SchemaName) ? ObjectName : $"{SchemaName}.{ObjectName}";
     public string ThreePartName() => $"{CatalogName}.{SchemaName}.{ObjectName}";
-
-    //public virtual DbSet<SqlDependency>? ObjectsReferenced { get; set; }
-    //public virtual DbSet<SqlDependency>? ObjectsReferencing { get; set; }
-    //public virtual DbSet<IntegrationObject>? IntegrationObjects { get; set; }
 
 }
