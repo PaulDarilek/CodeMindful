@@ -10,6 +10,8 @@ using Column = CodeMindful.CodeTools.DataDictionary.Models.Column;
 
 namespace CodeMindful.CodeTools.DataDictionary;
 
+/// <summary>Scan Information Schema to build Data Dictionary and Dependency Graphs</summary>
+/// <remarks>SQL SMO https://learn.microsoft.com/en-us/sql/relational-databases/server-management-objects-smo/tasks/scripting?view=sql-server-ver17</remarks>
 public class SqlServerScanner 
 {
     private DataContext DataDictionary { get; }
